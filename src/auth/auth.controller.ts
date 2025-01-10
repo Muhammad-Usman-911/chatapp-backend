@@ -8,6 +8,7 @@ import { AuthGuard } from "src/auth/guards/auth.guard";
 import { Request } from "express";
 import { ResendOtpDto } from "./dtos/resendOTP.dto";
 import { VerifyOtpDto } from "./dtos/verifyOtp.dto";
+import { LogoutDto } from "./dtos/logout.dto";
 
 
 @Controller('/auth')
@@ -52,9 +53,9 @@ export class AuthController{
         };
     }
 
-    @Post('logout')
     @UseGuards(AuthGuard)
-    async logout(@Body() userId:number) {
-        return await this.authService.logout(userId);
+    @Post('/logout')
+    async logout(@Body() logoutDto:LogoutDto) {
+        return await this.authService.logout(logoutDto.userId);
     }
 }

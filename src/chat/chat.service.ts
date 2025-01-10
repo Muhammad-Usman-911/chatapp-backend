@@ -22,9 +22,7 @@ export class ChatService {
       where: {
         type,
         participants: {
-          every: {
-            id: { in: [senderId, receiverId] },
-          },
+          every: { id: { in: [senderId, receiverId] } },
         },
       },
     });
@@ -43,6 +41,21 @@ export class ChatService {
 
     return chat.id;
   }
+
+  // async getMessagesBetweenUsers(senderId: number, receiverId: number): Promise<any[]> {
+  //   await this.verifyUserExists(senderId);
+  //   await this.verifyUserExists(receiverId);
+
+  //   return this.prisma.message.findMany({
+  //     where: {
+  //       OR: [
+  //         { senderId, receiverId },
+  //         { senderId: receiverId, receiverId: senderId },
+  //       ],
+  //     },
+  //     orderBy: { createdAt: 'asc' },
+  //   });
+  // }
 
   async sendMessage(createMessageDto: CreateMessageDto, socketServer: Server) {
     const { senderId, receiverId, chatId, content } = createMessageDto;
@@ -74,16 +87,6 @@ export class ChatService {
 
       console.log('Message created:', message);
 
-      // Add message ID to the chat messages array (assuming it's an array within chat)
-      await this.prisma.chat.update({
-        where: { id: currentChatId },
-        data: {
-          messages: {
-            connect: { id: message.id },
-          },
-        },
-      });
-
       // Emit the message to participants
       socketServer.to(`chat-${currentChatId}`).emit('newMessage', message);
 
@@ -92,5 +95,33 @@ export class ChatService {
       console.error('Error in sendMessage:', error);
       throw new Error('Failed to send message.');
     }
+  }
+
+  async getMessages(loggedInUserId: number, otherUserId: number) {
+    const chat = await this.prisma.chat.findFirst({
+      where: {
+        type: 'one-to-one',
+        participants: {
+          every: {
+            id: {
+              in: [loggedInUserId, otherUserId],
+            },
+          },
+        },
+      },
+      include: {
+        messages: {
+          orderBy: {
+            createdAt: 'asc', // Order messages by time
+          },
+        },
+      },
+    });
+
+    if (!chat) {
+      throw new Error('Chat not found');
+    }
+
+    return chat.messages;
   }
 }

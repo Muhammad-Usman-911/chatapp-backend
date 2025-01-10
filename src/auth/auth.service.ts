@@ -24,22 +24,10 @@ export class AuthService{
         try {
             const user = await this.prisma.user.findUnique({
                 where: { email },
-                select: { id: true, verified: true },
             });
     
             if (user) {
-                if (user.verified) {
-                    // Generate JWT token for verified user
-                    const token = this.generateJwtToken(user.id);
-                    return {
-                        isVerified: true,
-                        message: 'Joining the Chat',
-                        userData: user,
-                        token,
-                    };
-                }
-    
-                // Generate OTP for existing but unverified user
+                 // Generate OTP for existing but unverified user
                 await this.generateVerificationOtp(user.id);
     
                 return {
@@ -76,10 +64,16 @@ export class AuthService{
     }
     
     // Example JWT token generation method
-    private generateJwtToken(userId: number): string {
-        // Assuming you have some secret and options for token generation
-        const payload = { id: userId };
-        return this.jwtService.sign(payload,{ expiresIn: '3h' });
+    private generateJwtToken(user: any): string {
+        const tokenData = {
+            userId: user.id,
+            name: user.name,
+            email: user.email,
+        };
+
+        const token = this.jwtService.sign(tokenData, { expiresIn: '3h' });
+        
+        return token;
     }
     
     
@@ -208,14 +202,24 @@ export class AuthService{
     
     async resendOtp(email: string) {
         const user = await this.prisma.user.findUnique({
-            where: { email },
-            select: { email: true, id: true },
+            where: { email }
         });
-    
+        
         if (!user) {
             throw new NotFoundException('User not found.');
         }
-    
+        console.log(user.verified);
+        if (user.verified) {
+            // Generate JWT token for verified user
+            const token = this.generateJwtToken(user);
+            return {
+                isVerified: true,
+                message: 'Joining the Chat',
+                userData: user,
+                token,
+            };
+        }
+
         const existingOtp = await this.prisma.verificationOtp.findFirst({
             where: {
                 email: user.email,
@@ -267,15 +271,16 @@ export class AuthService{
     
     async logout(userId: number) {
             try {
+                console.log(userId);
                 // Reset verified status to false after logout
                 await this.prisma.user.update({
-                    where: { id: userId },
+                    where: { id: +userId },
                     data: { verified: false },
                 });    
                 return { message: 'Logged out successfully' };
             } catch (error) {
                 console.error(error);
-                throw new Error('Error during logout');
+                throw new NotFoundException('Error during logout');
             }
       }
     
