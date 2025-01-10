@@ -19,43 +19,69 @@ export class AuthService{
     }
 
     async loginUser(signupData: LoginDto) {
-        const { email,  name } = signupData;
-        
-        const user = await this.prisma.user.findUnique({
-            where:{email:email}
-        });
-        if(user){
-                // Generate OTP
+        const { email, name } = signupData;
+    
+        try {
+            const user = await this.prisma.user.findUnique({
+                where: { email },
+                select: { id: true, verified: true },
+            });
+    
+            if (user) {
+                if (user.verified) {
+                    // Generate JWT token for verified user
+                    const token = this.generateJwtToken(user.id);
+                    return {
+                        isVerified: true,
+                        message: 'Joining the Chat',
+                        userData: user,
+                        token,
+                    };
+                }
+    
+                // Generate OTP for existing but unverified user
                 await this.generateVerificationOtp(user.id);
+    
                 return {
+                    isVerified: false,
                     message: 'Check email for OTP Verification!',
                 };
-        }
-        else{
-            try {
-                const newuser = await this.prisma.user.create({
-                    data: {
-                        name,
-                        email,
-                        verified: false,
-                    },
-                });
-        
-                // Generate OTP
-               await this.generateVerificationOtp(newuser.id);
-        
-                return {
-                    message: 'User created successfully. Please verify your email. Check email for OTP Verification!',
-                };
-            } catch (error) {
-                console.log(error);
-                if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
-                    throw new BadRequestException('Email already exists.');
-                }
-                throw new InternalServerErrorException('Error during signup.');
             }
+    
+            // Create a new user if not found
+            const newUser = await this.prisma.user.create({
+                data: {
+                    name,
+                    email,
+                    verified: false,
+                },
+            });
+    
+            // Generate OTP for new user
+            await this.generateVerificationOtp(newUser.id);
+    
+            return {
+                isVerified: false,
+                message: 'User created successfully. Please verify your email. Check email for OTP Verification!',
+            };
+        } catch (error) {
+            console.error(error);
+    
+            if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
+                throw new BadRequestException('Email already exists.');
+            }
+    
+            throw new InternalServerErrorException('Error during signup.');
         }
     }
+    
+    // Example JWT token generation method
+    private generateJwtToken(userId: number): string {
+        // Assuming you have some secret and options for token generation
+        const payload = { id: userId };
+        return this.jwtService.sign(payload,{ expiresIn: '3h' });
+    }
+    
     
     //
 
@@ -149,7 +175,7 @@ export class AuthService{
                 email: user.email,
             };
     
-            const token = this.jwtService.sign(tokenData, { expiresIn: '10h' });
+            const token = this.jwtService.sign(tokenData, { expiresIn: '3h' });
             
             // Delete the OTP after successful verification
             await this.prisma.verificationOtp.delete({
@@ -239,5 +265,18 @@ export class AuthService{
     }    
     
     
+    async logout(userId: number) {
+            try {
+                // Reset verified status to false after logout
+                await this.prisma.user.update({
+                    where: { id: userId },
+                    data: { verified: false },
+                });    
+                return { message: 'Logged out successfully' };
+            } catch (error) {
+                console.error(error);
+                throw new Error('Error during logout');
+            }
+      }
     
 }

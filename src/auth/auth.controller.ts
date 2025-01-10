@@ -51,4 +51,10 @@ export class AuthController{
             data:user,
         };
     }
+
+    @Post('logout')
+    @UseGuards(AuthGuard)
+    async logout(@Body() userId:number) {
+        return await this.authService.logout(userId);
+    }
 }
