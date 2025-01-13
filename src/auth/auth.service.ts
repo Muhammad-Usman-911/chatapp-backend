@@ -269,19 +269,20 @@ export class AuthService{
     }    
     
     
-    async logout(userId: number) {
-            try {
-                console.log(userId);
-                // Reset verified status to false after logout
-                await this.prisma.user.update({
-                    where: { id: +userId },
-                    data: { verified: false },
-                });    
-                return { message: 'Logged out successfully' };
-            } catch (error) {
-                console.error(error);
-                throw new NotFoundException('Error during logout');
-            }
+    async logout(decodedUser: any) {
+        try {
+            console.log(decodedUser);
+          const userId = decodedUser.userId;  
+          console.log(userId);
+          await this.prisma.user.update({
+            where: { id: +userId },
+            data: { verified: false },
+          });
+          
+          return { message: 'Logged out successfully' };
+        } catch (error) {
+          console.error(error);
+          throw new NotFoundException('Error during logout');
+        }
       }
-    
 }

@@ -65,8 +65,8 @@ export class ChatService {
     }
 
     try {
-      await this.verifyUserExists(senderId);
-      await this.verifyUserExists(receiverId);
+      // await this.verifyUserExists(senderId);
+      // await this.verifyUserExists(receiverId);
 
       let currentChatId = chatId;
 
@@ -76,7 +76,7 @@ export class ChatService {
       }
 
       // Create the message
-      const message = await this.prisma.message.create({
+      const message = this.prisma.message.create({
         data: {
           content,
           chatId: currentChatId,
@@ -112,7 +112,7 @@ export class ChatService {
       include: {
         messages: {
           orderBy: {
-            createdAt: 'asc', // Order messages by time
+            createdAt: 'desc', // Order messages by time
           },
         },
       },
