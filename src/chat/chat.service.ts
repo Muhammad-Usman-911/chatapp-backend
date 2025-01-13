@@ -112,7 +112,7 @@ export class ChatService {
       include: {
         messages: {
           orderBy: {
-            createdAt: 'desc', // Order messages by time
+            createdAt: 'asc', // Order messages by time
           },
         },
       },
