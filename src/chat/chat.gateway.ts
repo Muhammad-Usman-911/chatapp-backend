@@ -29,7 +29,7 @@ export class ChatGateway {
   }
 
   @SubscribeMessage('sendMessage')
-  async handleMessage(client: Socket, createMessageDto: any) {
+  async handleMessage(@MessageBody() createMessageDto: any, @ConnectedSocket() client: Socket) {
     try {
       const message = await this.chatService.sendMessage(createMessageDto, this.server);
       
