@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { Server } from 'socket.io';
@@ -58,7 +58,7 @@ export class ChatService {
   // }
 
   async sendMessage(createMessageDto: CreateMessageDto, socketServer: Server) {
-    const { senderId, receiverId, chatId, content } = createMessageDto;
+    const { senderId, receiverId, content } = createMessageDto;
 
     if (!receiverId) {
       throw new Error('Receiver ID is required for one-to-one chats.');
@@ -68,13 +68,8 @@ export class ChatService {
       // await this.verifyUserExists(senderId);
       // await this.verifyUserExists(receiverId);
 
-      let currentChatId = chatId;
-
-      if (!currentChatId) {
-        console.log('Chat ID is null, ensuring chat exists...');
-        currentChatId = await this.ensureChatExists(senderId, receiverId, 'one-to-one');
-      }
-
+      const  currentChatId = await this.ensureChatExists(senderId, receiverId, 'one-to-one');
+    
       // Create the message
       const message = this.prisma.message.create({
         data: {
@@ -85,7 +80,7 @@ export class ChatService {
         },
       });
 
-      console.log('Message created:', message);
+      // console.log('Message created:', message);
 
       // Emit the message to participants
       socketServer.to(`chat-${currentChatId}`).emit('newMessage', message);
@@ -117,11 +112,20 @@ export class ChatService {
         },
       },
     });
-
-    if (!chat) {
-      throw new Error('Chat not found');
-    }
-
-    return chat.messages;
+  
+    // if (!chat) {
+    //   return {
+    //     chatId: chat.id||undefined,
+    //     messages: chat.messages||[],
+    //   };  
+    // }
+  
+    console.log('Chat ID:', chat.id||undefined);
+  
+    return {
+      chatId: chat.id||null,
+      messages: chat.messages||[],
+    };
   }
+  
 }

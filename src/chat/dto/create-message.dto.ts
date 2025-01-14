@@ -5,9 +5,6 @@
     content: string;
 
     @IsInt()
-    chatId: number;
-
-    @IsInt()
     @IsNotEmpty()
     senderId: number;
 

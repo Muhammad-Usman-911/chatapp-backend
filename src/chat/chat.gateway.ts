@@ -10,16 +10,27 @@ export class ChatGateway {
   server: Server;
 
   constructor(private chatService: ChatService) {}
+
   @UseGuards(AuthMiddleware)
   @SubscribeMessage('handleConnection')
   async handleConnection(client: Socket) {
     const userId = client.handshake.query.userId as string;
     if (userId) {
-      console.log(`User joined room: user_${userId}`);
+      console.log(`User joined room: ${userId}`);
       client.join(`user_${userId}`);
     }
   }
 
+  @SubscribeMessage('typing')
+  handleTyping(
+    @MessageBody() data: { userId: number; chatId: string ,typingFlag:boolean, receiverId:number},
+    @ConnectedSocket() client: Socket,
+  ) {
+    console.log('Typing Hit. chatId',data.chatId,' userId : ',data.userId,' receiverId : ',data.receiverId,' typing : ',data.typingFlag);
+    client.broadcast.to(data.chatId).emit('typing', { userId: data.userId, isTyping: data.typingFlag,receiverId:data.receiverId });
+  }
+
+  
   @SubscribeMessage('fetchMessages')
   async fetchMessages(client: Socket, data: { loggedInUserId: number; otherUserId: number }) {
     try {
@@ -33,7 +44,7 @@ export class ChatGateway {
   @SubscribeMessage('sendMessage')
   async handleMessage(@MessageBody() createMessageDto: any, @ConnectedSocket() client: Socket) {
     try {
-      const message =await this.chatService.sendMessage(createMessageDto, this.server);
+      const message = await this.chatService.sendMessage(createMessageDto, this.server);
       
       // Notify the receiver if they're connected
       this.server.to(`user_${createMessageDto.receiverId}`).emit('newMessage', message);
