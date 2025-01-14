@@ -9,6 +9,7 @@ import { Request } from "express";
 import { ResendOtpDto } from "./dtos/resendOTP.dto";
 import { VerifyOtpDto } from "./dtos/verifyOtp.dto";
 import { LogoutDto } from "./dtos/logout.dto";
+import { GetUser } from "./decorators/getUser.decorator";
 
 
 @Controller('/auth')
@@ -55,8 +56,9 @@ export class AuthController{
 
     @UseGuards(AuthGuard)
     @Post('/logout')
-    async logout(@Req() req:Request) {
-        const user = req.user;
-        return await this.authService.logout(user);
+    async logout(@GetUser() res:any) {
+        const user = res;
+        const id=user.userId;
+        return await this.authService.logout(id);
     }
 }

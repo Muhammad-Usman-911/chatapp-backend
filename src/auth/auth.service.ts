@@ -269,13 +269,11 @@ export class AuthService{
     }    
     
     
-    async logout(decodedUser: any) {
-        try {
-            console.log(decodedUser);
-          const userId = decodedUser.userId;  
-          console.log(userId);
+    async logout(id: any) {
+        try {  
+          console.log(id);
           await this.prisma.user.update({
-            where: { id: +userId },
+            where: { id: +id },
             data: { verified: false },
           });
           

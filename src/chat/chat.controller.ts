@@ -2,6 +2,7 @@ import { Controller, Get, Param, UseGuards, Req } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Request } from 'express';
+import { GetUser } from './decorators/getUser.decorator';
 
 // Define a custom User interface (modify this based on actual implementation)
 interface User {
@@ -31,13 +32,8 @@ export class ChatController {
   }
 
   @Get('/messages/:otherUserId')
-  async getMessages(@Param('otherUserId') otherUserId: number, @Req() req: Request) {
+  async getMessages(@Param('otherUserId') otherUserId: number, @GetUser('userId') userId: number) {
     try {
-      const user = req.user as User;  // Explicit typecasting to User
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-      const userId = user.userId;  // Accessing userId from the User object
       const messages = await this.chatService.getMessages(userId, otherUserId);
       return { messages };
     } catch (error) {
