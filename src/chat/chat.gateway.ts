@@ -60,15 +60,23 @@ export class ChatGateway {
   @SubscribeMessage('sendMessage')
   async handleMessage(@MessageBody() createMessageDto: any, @ConnectedSocket() client: Socket) {
     try {
-      const message = await this.chatService.sendMessage(createMessageDto, this.server);
-      
-      // Notify the receiver if they're connected
+      let imageBlob: Buffer | null = null;
+
+      if (createMessageDto.image) {
+        imageBlob = Buffer.from(createMessageDto.image, 'base64'); 
+      }
+
+      const message = await this.chatService.sendMessage({
+        ...createMessageDto,
+        image: imageBlob,
+      }, this.server);
+
       this.server.to(`user_${createMessageDto.receiverId}`).emit('newMessage', message);
 
-      // Emit confirmation or message to client
       client.emit('messageSent', message);
     } catch (error) {
       client.emit('messageError', { error: error.message });
     }
   }
+
 }

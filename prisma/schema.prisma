@@ -51,6 +51,7 @@ model Chat {
 model Message {
   id         Int      @id @default(autoincrement())
   content    String
+  image      Bytes? 
   
   chatId     Int
   chat       Chat     @relation(fields: [chatId], references: [id])
@@ -60,7 +61,6 @@ model Message {
   
   receiverId  Int?
   receiver    User?   @relation("ReceiverMessages", fields: [receiverId], references: [id])
-  
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
