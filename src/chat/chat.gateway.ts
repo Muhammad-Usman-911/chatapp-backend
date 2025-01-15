@@ -59,24 +59,28 @@ export class ChatGateway {
 
   @SubscribeMessage('sendMessage')
   async handleMessage(@MessageBody() createMessageDto: any, @ConnectedSocket() client: Socket) {
-    try {
-      let imageBlob: Buffer | null = null;
+      try {
+          let imageBlob: Buffer | null = null;
 
-      if (createMessageDto.image) {
-        imageBlob = Buffer.from(createMessageDto.image, 'base64'); 
+          if (createMessageDto.image) {
+              imageBlob = Buffer.from(createMessageDto.image, 'base64');
+          }
+
+          const message = await this.chatService.sendMessage({
+              ...createMessageDto,
+              image: imageBlob,
+          }, this.server);
+
+          this.server.to(`user_${createMessageDto.receiverId}`).emit('newMessage', {
+              ...message,
+              image: createMessageDto.image, // Sending back the base64 string to display in UI
+          });
+
+          client.emit('messageSent', message);
+      } catch (error) {
+          client.emit('messageError', { error: error.message });
       }
-
-      const message = await this.chatService.sendMessage({
-        ...createMessageDto,
-        image: imageBlob,
-      }, this.server);
-
-      this.server.to(`user_${createMessageDto.receiverId}`).emit('newMessage', message);
-
-      client.emit('messageSent', message);
-    } catch (error) {
-      client.emit('messageError', { error: error.message });
-    }
   }
+
 
 }

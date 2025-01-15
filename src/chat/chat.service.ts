@@ -89,41 +89,53 @@ export class ChatService {
     }
   }
   
-
   async getMessages(loggedInUserId: number, otherUserId: number) {
     const chat = await this.prisma.chat.findFirst({
-      where: {
-        type: 'one-to-one',
-        participants: {
-          every: {
-            id: {
-              in: [loggedInUserId, otherUserId],
+        where: {
+            type: 'one-to-one',
+            participants: {
+                every: {
+                    id: {
+                        in: [loggedInUserId, otherUserId],
+                    },
+                },
             },
-          },
         },
-      },
-      include: {
-        messages: {
-          orderBy: {
-            createdAt: 'asc', // Order messages by time
-          },
+        include: {
+            messages: {
+                orderBy: {
+                    createdAt: 'asc', // Order messages by time
+                },
+            },
         },
-      },
     });
-  
-    // if (!chat) {
-    //   return {
-    //     chatId: chat.id||undefined,
-    //     messages: chat.messages||[],
-    //   };  
-    // }
-  
-    console.log('Chat ID:', chat.id||undefined);
-  
+
+    if (!chat || !chat.messages) {
+        return {
+            chatId: null,
+            messages: [],
+        };
+    }
+
+    // Process the messages array
+    const updatedMessages = chat.messages.map((message) => {
+        if (message.image) {
+            const uint8Array = new Uint8Array(message.image);
+            const base64Image = Buffer.from(uint8Array).toString('base64');
+            return {
+                ...message,
+                image: `${base64Image}`,
+            };
+        }
+        return message;
+    });
+
+    // console.log('Updated Messages:', updatedMessages);
+
     return {
-      chatId: chat.id||null,
-      messages: chat.messages||[],
+        chatId: chat.id,
+        messages: updatedMessages,
     };
-  }
-  
+}
+
 }
