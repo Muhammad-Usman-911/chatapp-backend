@@ -23,12 +23,28 @@ export class ChatGateway {
 
   @SubscribeMessage('typing')
   handleTyping(
-    @MessageBody() data: { userId: number; chatId: string ,typingFlag:boolean, receiverId:number},
+    @MessageBody() data: { userId: number; chatId: string; typingFlag: boolean; receiverId: number },
     @ConnectedSocket() client: Socket,
   ) {
-    console.log('Typing Hit. chatId',data.chatId,' userId : ',data.userId,' receiverId : ',data.receiverId,' typing : ',data.typingFlag);
-    client.broadcast.to(data.chatId).emit('typing', { userId: data.userId, isTyping: data.typingFlag,receiverId:data.receiverId });
+    console.log(
+      'Typing Hit. chatId',
+      data.chatId,
+      ' userId: ',
+      data.userId,
+      ' receiverId: ',
+      data.receiverId,
+      ' typing: ',
+      data.typingFlag,
+    );
+  
+    // Ensure room `user_<receiverId>` exists and user is subscribed
+    this.server.to(`user_${data.receiverId}`).emit('recievetyping', {
+      userId: data.userId,
+      typing: data.typingFlag,
+    });
+    console.log('Typing event sent');
   }
+  
 
   
   @SubscribeMessage('fetchMessages')
