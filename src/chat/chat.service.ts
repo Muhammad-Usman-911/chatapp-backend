@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { PrismaService } from 'src/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { Server } from 'socket.io';
+import { CreateGroupDto } from './dto/create-group.dto';
 
 @Injectable()
 export class ChatService {
@@ -42,52 +43,93 @@ export class ChatService {
     return chat.id;
   }
 
-  // async getMessagesBetweenUsers(senderId: number, receiverId: number): Promise<any[]> {
-  //   await this.verifyUserExists(senderId);
-  //   await this.verifyUserExists(receiverId);
+  
+  // For Group
+  // async sendMessageGroup(createMessageDto: CreateGroupMessageDto, socketServer: Server) {
+  //   const { senderId, chatId, content, image } = createMessageDto;
+  
+    
+  //   try {
+  //     // Ensure chat exists
+  //     const currentChatId = await this.ensureChatExists(senderId, receiverId, 'one-to-one');
+  
+  //     // Create the message with potential image blob
+      
+  //     const message = this.prisma.message.create({
+  //       data: {
+  //         content,
+  //         chatId: currentChatId,
+  //         senderId,
+  //         receiverId,
+  //         image,  // Store the image blob here
+  //       },
+  //     });
+  
+  //     socketServer.to(`chat-${currentChatId}`).emit('newMessage', message);
+  
+  //     return message;
+  //   } catch (error) {
+  //     console.error('Error in sendMessage:', error);
+  //     throw new Error('Failed to send message.');
+  //   }
+  // }
+  
 
-  //   return this.prisma.message.findMany({
-  //     where: {
-  //       OR: [
-  //         { senderId, receiverId },
-  //         { senderId: receiverId, receiverId: senderId },
-  //       ],
-  //     },
-  //     orderBy: { createdAt: 'asc' },
-  //   });
+  // async sendMessage(createMessageDto: CreateMessageDto, socketServer: Server) {
+  //   const { senderId, receiverId, content, image } = createMessageDto;
+  
+  //   if (!receiverId) {
+  //     throw new Error('Receiver ID is required for one-to-one chats.');
+  //   }
+  
+  //   try {
+  //     // Ensure chat exists
+  //     const currentChatId = await this.ensureChatExists(senderId, receiverId, 'one-to-one');
+  
+  //     // Create the message with potential image blob
+      
+  //     const message = this.prisma.message.create({
+  //       data: {
+  //         content,
+  //         chatId: currentChatId,
+  //         senderId,
+  //         receiverId,
+  //         image,  // Store the image blob here
+  //       },
+  //     });
+  
+  //     socketServer.to(`chat-${currentChatId}`).emit('newMessage', message);
+  
+  //     return message;
+  //   } catch (error) {
+  //     console.error('Error in sendMessage:', error);
+  //     throw new Error('Failed to send message.');
+  //   }
   // }
 
-  async sendMessage(createMessageDto: CreateMessageDto, socketServer: Server) {
-    const { senderId, receiverId, content, image } = createMessageDto;
-  
-    if (!receiverId) {
-      throw new Error('Receiver ID is required for one-to-one chats.');
-    }
-  
-    try {
-      // Ensure chat exists
-      const currentChatId = await this.ensureChatExists(senderId, receiverId, 'one-to-one');
-  
-      // Create the message with potential image blob
-      
-      const message = this.prisma.message.create({
-        data: {
-          content,
-          chatId: currentChatId,
-          senderId,
-          receiverId,
-          image,  // Store the image blob here
-        },
-      });
-  
-      socketServer.to(`chat-${currentChatId}`).emit('newMessage', message);
-  
-      return message;
-    } catch (error) {
-      console.error('Error in sendMessage:', error);
-      throw new Error('Failed to send message.');
-    }
+async sendMessage(createMessageDto: CreateMessageDto, socketServer: Server) {
+  const { senderId, content, chatId, image } = createMessageDto;
+
+  try {
+    // Create and save the message
+    const message = await this.prisma.message.create({
+      data: {
+        content,
+        chatId,
+        senderId,
+        image, // Store the image Blob
+      },
+    });
+
+    // Notify users in the chat
+    socketServer.to(`chat-${chatId}`).emit('newMessage', message);
+
+    return message;
+  } catch (error) {
+    console.error('Error in sendMessage:', error);
+    throw new Error('Failed to send message.');
   }
+}
   
   async getMessages(loggedInUserId: number, otherUserId: number) {
     const chat = await this.prisma.chat.findFirst({
@@ -137,5 +179,42 @@ export class ChatService {
         messages: updatedMessages,
     };
 }
+
+async createChatGroup(createGroupDto: CreateGroupDto ) {
+  const { name, participants } = createGroupDto;
+
+  // Use Prisma to create a new chat group
+  const chat = await this.prisma.chat.create({
+    data: {
+      name,
+      type: 'group', // Assuming this is a group chat
+      participants: {
+        connect: participants.map((id) => ({ id })), // Connect existing user IDs
+      },
+    },
+    include: {
+      participants: true, // Include participants in the response if needed
+    },
+  });
+
+  return chat;
+}
+
+async getUserGroups(userId: number) {
+  return await this.prisma.chat.findMany({
+    where: {
+      type: 'group',
+      participants: {
+        some: {
+          id: userId,
+        },
+      },
+    },
+    include: {
+      participants: true,
+    },
+  });
+}
+
 
 }

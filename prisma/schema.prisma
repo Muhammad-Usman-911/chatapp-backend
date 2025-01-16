@@ -43,6 +43,7 @@ model Chat {
   id           Int       @id @default(autoincrement())
   participants User[]    @relation("UserChats") // Implicit many-to-many
   messages     Message[]
+  name         String    @default("Groups")
   type         String    // "one-to-one" or "group"
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

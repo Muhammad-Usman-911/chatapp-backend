@@ -1,4 +1,4 @@
-    import { IsString, IsInt, IsOptional, IsNotEmpty } from 'class-validator';
+    import { IsString, IsInt, IsOptional, IsNotEmpty, IsArray } from 'class-validator';
 
     export class CreateMessageDto {
     @IsString()
@@ -7,6 +7,9 @@
     @IsInt()
     @IsNotEmpty()
     senderId: number;
+    
+    @IsString()
+    msgType:string;
 
     @IsInt()
     @IsOptional()  // Marks receiverId as optional
@@ -14,4 +17,13 @@
     
     @IsOptional()  // Marks receiverId as optional
     image?: any | null;
+    
+    @IsInt()
+    @IsNotEmpty()
+    chatId:number;
+    
+    @IsArray()
+    @IsOptional()
+    participants: number[]; // Array of user IDs
+    
 }
