@@ -5,6 +5,8 @@ import { AuthMiddleware } from 'src/common/middlewares/auth.middleware';
 import { UseGuards } from '@nestjs/common';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
+import { group } from 'console';
+import { TypingDto } from './dto/typing.dto';
 
 @WebSocketGateway({ cors: { origin: '*' } })
 export class ChatGateway {
@@ -23,30 +25,39 @@ export class ChatGateway {
     }
   }
 
-  // Todo : make dto of typing in for one on one take receiverId and for Group take Pariticipant array and update them like wise. 
   @SubscribeMessage('typing')
   handleTyping(
-    @MessageBody() data: { userId: number; chatId: string; typingFlag: boolean; receiverId: number },
-    @ConnectedSocket() client: Socket,
+    @MessageBody() typingDto: TypingDto,
+    @ConnectedSocket() client: Socket
   ) {
-    // console.log(
-    //   'Typing Hit. chatId',
-    //   data.chatId,
-    //   ' userId: ',
-    //   data.userId,
-    //   ' receiverId: ',
-    //   data.receiverId,
-    //   ' typing: ',
-    //   data.typingFlag,
-    // );
+    const { userId, chatId, typing, receiverId, participants } = typingDto;
   
-    // Ensure room `user_<receiverId>` exists and user is subscribed
-    this.server.to(`user_${data.receiverId}`).emit('recievetyping', {
-      userId: data.userId,
-      typing: data.typingFlag,
-    });
-    //console.log('Typing event sent');
+    if (participants && participants.length > 0) {
+      // Typing in a group chat
+      participants.forEach((participant) => {
+        if (participant.id !== userId) {
+          this.server.to(`user_${participant.id}`).emit('recievetyping', {
+            userId,
+            chatId,
+            typing,
+            group: true,
+          });
+        }
+      });
+    } else if (receiverId) {
+      // Typing in a one-to-one chat
+      this.server.to(`user_${receiverId}`).emit('recievetyping', {
+        userId,
+        chatId,
+        typing,
+        group: false,
+      });
+    }
+  
+    // Optionally log the event
+    console.log('Typing event sent:', { userId, chatId, typing, receiverId, participants });
   }
+  
   
 
   
@@ -66,6 +77,7 @@ export class ChatGateway {
     @ConnectedSocket() client: Socket
   ) {
     try {
+      console.log('Msg from FrontEnd : ',createMessageDto);
       const { image, chatId } = createMessageDto;
   
       // Convert base64 image to Buffer if it exists
@@ -86,7 +98,8 @@ export class ChatGateway {
           if(participantId!==createMessageDto.senderId){
             this.server.to(`user_${participantId}`).emit('newMessage', {
               ...message,
-              image: createMessageDto.image, // Sending back the base64 string to display in UI
+              image: createMessageDto.image, 
+              group:true// Sending back the base64 string to display in UI
             });
           }
         });
@@ -94,7 +107,8 @@ export class ChatGateway {
         // Notify only the receiver
         this.server.to(`user_${createMessageDto.receiverId}`).emit('newMessage', {
           ...message,
-          image: createMessageDto.image, // Sending back the base64 string to display in UI
+          image: createMessageDto.image,
+          group:false, // Sending back the base64 string to display in UI
         });
       }
 
@@ -108,36 +122,36 @@ export class ChatGateway {
 
 
   @SubscribeMessage('createGroup')
-async handleGroupCreation(
-  @MessageBody() createGroupDto: CreateGroupDto,
-  @ConnectedSocket() client: Socket
-) {
-  try {
-    const { name, participants } = createGroupDto;
+  async handleGroupCreation(
+    @MessageBody() createGroupDto: CreateGroupDto,
+    @ConnectedSocket() client: Socket
+  ) {
+    try {
+      const { name, participants } = createGroupDto;
 
-    // Create a new chat group using the service
-    const group = await this.chatService.createChatGroup(createGroupDto);
+      // Create a new chat group using the service
+      const group = await this.chatService.createChatGroup(createGroupDto);
 
-    // Notify all participants about the group creation
-    participants.forEach((participantId) => {
-      this.server.to(`user_${participantId}`).emit('groupCreated', {
+      // Notify all participants about the group creation
+      participants.forEach((participantId) => {
+        this.server.to(`user_${participantId}`).emit('groupCreated', {
+          groupId: group.id,
+          name: group.name,
+          participants: group.participants,
+        });
+      });
+
+      // Acknowledge the creator of the group
+      client.emit('groupCreatedAck', {
         groupId: group.id,
         name: group.name,
         participants: group.participants,
       });
-    });
-
-    // Acknowledge the creator of the group
-    client.emit('groupCreatedAck', {
-      groupId: group.id,
-      name: group.name,
-      participants: group.participants,
-    });
-  } catch (error) {
-    // Handle errors gracefully
-    client.emit('groupCreationError', { error: error.message });
+    } catch (error) {
+      // Handle errors gracefully
+      client.emit('groupCreationError', { error: error.message });
+    }
   }
-}
 
 
 }

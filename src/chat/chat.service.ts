@@ -216,18 +216,39 @@ async getUserGroups(userId: number) {
   });
 }
 
-  async getChat(chatId: number) {
-    const chat = await this.prisma.chat.findUnique({
-        where: { id: chatId },
-        include: {
-            participants: true,
-            messages: {
-                orderBy: {
-                    createdAt: 'asc', // Order messages by time
-                },
-            },
-        },
-    });
-    return chat;
+async getChat(chatId: number) {
+  const chat = await this.prisma.chat.findUnique({
+      where: { id: chatId },
+      include: {
+          participants: true,
+          messages: {
+              orderBy: {
+                  createdAt: 'asc', // Order messages by time
+              },
+              select: {
+                  id: true,
+                  content: true,
+                  createdAt: true,
+                  image: true, // Assuming image is stored as bytes (Buffer)
+                  senderId: true, // Include senderId
+              },
+          },
+      },
+  });
+
+  if (chat && chat.messages) {
+      const messagesWithBase64Images = chat.messages.map((message: any) => {
+          if (message.image) {
+              const imageBuffer = Buffer.from(message.image); 
+              message.image = imageBuffer.toString('base64'); 
+          }
+          return message;
+      });
+
+      chat.messages = messagesWithBase64Images; // Update chat object with Base64 images
   }
+
+  return chat;
+}
+
 }
