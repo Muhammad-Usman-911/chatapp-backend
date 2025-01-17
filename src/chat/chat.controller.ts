@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards, Req, Body, Post } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards, Req, Body, Post, Delete } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Request } from 'express';
@@ -76,4 +76,9 @@ export class ChatController {
       return await this.chatService.getChat(chatId);
   }
 
+  // For testing only
+  // @Delete(':chatId')
+  // async deleteChat(@Param('chatId') chatId:number){
+  //   return await this.chatService.deleteChat(chatId);
+  // }
 }

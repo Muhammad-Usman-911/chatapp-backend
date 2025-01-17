@@ -250,5 +250,27 @@ async getChat(chatId: number) {
 
   return chat;
 }
+async deleteChat(chatId: number) {
+  try {
+    // Delete all messages related to the chat first
+    await this.prisma.message.deleteMany({
+      where: {
+        chatId: chatId,
+      },
+    });
+
+    // Now delete the chat itself
+    const deletedChat = await this.prisma.chat.delete({
+      where: {
+        id: chatId,
+      },
+    });
+    console.log('Chat deleted successfully:', deletedChat);
+    return deletedChat;
+  } catch (error) {
+    console.error('Error deleting chat:', error);
+    throw error; // Rethrow the error to handle it upstream
+  }
+}
 
 }

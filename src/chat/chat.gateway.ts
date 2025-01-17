@@ -153,5 +153,35 @@ export class ChatGateway {
     }
   }
 
+  @SubscribeMessage('deleteChat')
+  async handleChatDeletion(
+    @MessageBody() chatId: number,
+    @ConnectedSocket() client: Socket
+  ) {
+    try {
+      // Fetch the chat details, including its participants
+      const chat = await this.chatService.getChat(chatId);
+
+      if (!chat) {
+        throw new Error('Chat not found');
+      }
+
+      const { participants } = chat;
+
+      // Delete all messages related to the chat and then delete the chat
+      await this.chatService.deleteChat(chatId);
+
+      // Notify all participants about the chat deletion
+      participants.forEach((participant) => {
+        this.server.to(`user_${participant.id}`).emit('chatDeleted', { chatId });
+      });
+
+      // Optionally, acknowledge the client who requested the deletion
+      client.emit('chatDeletedAck', { chatId });
+    } catch (error) {
+      // Handle errors gracefully
+      client.emit('chatDeletionError', { error: error.message });
+    }
+  }
 
 }
