@@ -70,5 +70,10 @@ export class ChatController {
       return { error: error.message };
     }
   }
+  
+  @Get(':chatId')
+  async getChat(@Param('chatId') chatId: number) {
+      return await this.chatService.getChat(chatId);
+  }
 
 }

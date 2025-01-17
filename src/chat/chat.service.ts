@@ -216,5 +216,18 @@ async getUserGroups(userId: number) {
   });
 }
 
-
+  async getChat(chatId: number) {
+    const chat = await this.prisma.chat.findUnique({
+        where: { id: chatId },
+        include: {
+            participants: true,
+            messages: {
+                orderBy: {
+                    createdAt: 'asc', // Order messages by time
+                },
+            },
+        },
+    });
+    return chat;
+  }
 }
