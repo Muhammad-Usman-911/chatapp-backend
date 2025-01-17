@@ -24,6 +24,6 @@
     
     @IsArray()
     @IsOptional()
-    participants: number[]; // Array of user IDs
+    participants: { id: number; name: string; email: string; verified: boolean }[]; // Updated type
     
 }

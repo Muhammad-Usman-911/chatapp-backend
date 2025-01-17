@@ -80,11 +80,15 @@ export class ChatGateway {
       // Notify users in the chat
       if (createMessageDto.msgType === 'Group') {
         // Notify all participants in the group
-        createMessageDto.participants.forEach((participantId) => {
-          this.server.to(`user_${participantId}`).emit('newMessage', {
-            ...message,
-            image: createMessageDto.image, // Sending back the base64 string to display in UI
-          });
+        console.log('Msg in Group: ', createMessageDto);
+        createMessageDto.participants.forEach((participant) => {
+          const participantId = participant.id; 
+          if(participantId!==createMessageDto.senderId){
+            this.server.to(`user_${participantId}`).emit('newMessage', {
+              ...message,
+              image: createMessageDto.image, // Sending back the base64 string to display in UI
+            });
+          }
         });
       } else {
         // Notify only the receiver
