@@ -13,6 +13,7 @@ A robust backend service built with NestJS featuring authentication, real-time c
 
 - **Real-time Chat**
   - One-on-one messaging
+  - Group chat functionality
   - WebSocket implementation
   - Message history
   - User presence
@@ -97,8 +98,27 @@ Header: Authorization: Bearer <token>
 
 ### Chat
 
+#### One-on-One Chat
 ```
 GET /chat/messages/:receiverId
+Header: Authorization: Bearer <token>
+```
+
+#### Group Chat
+```
+POST /chat/messages/creategroup
+Body: {
+    "name": "New Group",
+    "participants": [3]
+}
+
+GET /chat/groups
+Header: Authorization: Bearer <token>
+
+GET /chat/:groupId
+Header: Authorization: Bearer <token>
+
+DELETE /chat/:groupId
 Header: Authorization: Bearer <token>
 ```
 
@@ -110,6 +130,77 @@ The application uses the following Prisma models:
 - **VerificationOtp**: Manages OTP verification
 - **Chat**: Handles chat rooms and participants
 - **Message**: Stores chat messages
+
+### Updated Prisma Schema
+
+```prisma
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               Int               @id @default(autoincrement())
+  name             String
+  email            String            @unique
+  verified         Boolean           @default(false)
+  verificationOtps VerificationOtp[]
+  chats            Chat[]            @relation("UserChats")  // Implicit many-to-many
+  sentMessages     Message[]         @relation("SenderMessages")
+  receivedMessages Message[]         @relation("ReceiverMessages")  // Added inverse relation
+}
+
+model VerificationOtp {
+  id         Int      @id @default(autoincrement())
+  otp        String
+  expiresAt  DateTime
+  used       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  email      String
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([email], name: "email_idx")
+  @@unique([otp, userId])
+}
+
+model Chat {
+  id           Int       @id @default(autoincrement())
+  participants User[]    @relation("UserChats") // Implicit many-to-many
+  messages     Message[]
+  name         String    @default("Groups")
+  type         String    // "one-to-one" or "group"
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Message {
+  id         Int      @id @default(autoincrement())
+  content    String
+  image      Bytes?
+  
+  chatId     Int
+  chat       Chat     @relation(fields: [chatId], references: [id])
+  
+  senderId   Int
+  sender     User     @relation("SenderMessages", fields: [senderId], references: [id])
+  
+  receiverId  Int?
+  receiver    User?   @relation("ReceiverMessages", fields: [receiverId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([chatId], name: "chat_idx")
+}
+```
 
 ## Environment Variables
 
@@ -194,3 +285,4 @@ The application implements a global error handling strategy with appropriate HTT
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+
