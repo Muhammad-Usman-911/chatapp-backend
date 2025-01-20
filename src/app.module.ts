@@ -10,6 +10,7 @@ import { AuthMiddleware } from './common/middlewares/auth.middleware';
 import { PrismaService } from './prisma.service';
 import { AuthGuard } from './auth/guards/auth.guard';
 import { ChatModule } from './chat/chat.module';
+import { OpenaiModule } from './openai/openai.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { ChatModule } from './chat/chat.module';
         inject:[ConfigService]
       }),
     ChatModule,
+    OpenaiModule,
     ],
   controllers: [AppController],
   providers: [AppService,PrismaService,AuthGuard],
