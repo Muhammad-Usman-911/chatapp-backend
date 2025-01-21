@@ -18,6 +18,10 @@ A robust backend service built with NestJS featuring authentication, real-time c
   - Message history
   - User presence
 
+- **Chat API Integration**
+  - Fetch AI-generated responses using the OpenAI API.
+  - Endpoint for interacting with OpenAI API: `/openai/chat?prompt=<query>`
+
 - **Security**
   - JWT Authentication Guards
   - Custom Middleware
@@ -56,10 +60,15 @@ src/
 │   └── chat.service.ts
 ├── common/
 │   └── middlewares/
-│   |   └── auth.middleware.ts
-│   └── coommon.module.ts/
+│       └── auth.middleware.ts
+│   └── common.module.ts
 ├── config/
 ├── mailer/
+├── openai/
+│   ├── dto/
+│   ├── openai.controller.ts
+│   ├── openai.module.ts
+│   └── openai.service.ts
 └── prisma/
     └── schema.prisma
 ```
@@ -122,6 +131,14 @@ DELETE /chat/:groupId
 Header: Authorization: Bearer <token>
 ```
 
+### OpenAI Chat Integration
+
+#### Fetch AI Response
+```
+GET /openai/chat?prompt=<query>
+Header: Authorization: Bearer <token>
+```
+
 ## Database Schema
 
 The application uses the following Prisma models:
@@ -152,9 +169,9 @@ model User {
   email            String            @unique
   verified         Boolean           @default(false)
   verificationOtps VerificationOtp[]
-  chats            Chat[]            @relation("UserChats")  // Implicit many-to-many
+  chats            Chat[]            @relation("UserChats")
   sentMessages     Message[]         @relation("SenderMessages")
-  receivedMessages Message[]         @relation("ReceiverMessages")  // Added inverse relation
+  receivedMessages Message[]         @relation("ReceiverMessages")
 }
 
 model VerificationOtp {
@@ -174,7 +191,7 @@ model VerificationOtp {
 
 model Chat {
   id           Int       @id @default(autoincrement())
-  participants User[]    @relation("UserChats") // Implicit many-to-many
+  participants User[]    @relation("UserChats")
   messages     Message[]
   name         String    @default("Groups")
   type         String    // "one-to-one" or "group"
@@ -193,8 +210,8 @@ model Message {
   senderId   Int
   sender     User     @relation("SenderMessages", fields: [senderId], references: [id])
   
-  receiverId  Int?
-  receiver    User?   @relation("ReceiverMessages", fields: [receiverId], references: [id])
+  receiverId Int?
+  receiver   User?    @relation("ReceiverMessages", fields: [receiverId], references: [id])
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -285,4 +302,3 @@ The application implements a global error handling strategy with appropriate HTT
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
-
