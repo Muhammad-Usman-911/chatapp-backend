@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Req, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Put, Query, Req, Res, UseGuards } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { LoginDto } from './dtos/login.dto';
 import { VerificationOTPDto } from './dtos/verificationOTP.dto';
@@ -10,6 +10,7 @@ import { ResendOtpDto } from "./dtos/resendOTP.dto";
 import { VerifyOtpDto } from "./dtos/verifyOtp.dto";
 import { LogoutDto } from "./dtos/logout.dto";
 import { GetUser } from "./decorators/getUser.decorator";
+import { PaginationDto } from "./dtos/pagination.dto";
 
 
 @Controller('/auth')
@@ -17,10 +18,10 @@ export class AuthController{
     constructor(private readonly authService:AuthService){}
 
     @UseGuards(AuthGuard)
-    @Get()
-    async getAllUser ():Promise<any>{
-        return await this.authService.fetchAllUser();
-    }
+  @Get()
+  async getAllUser(@Query() paginationDto: PaginationDto): Promise<any> {
+    return this.authService.fetchAllUser(paginationDto);
+  }
 
     @Post('/login')
     async login (@Body() userData:LoginDto):Promise<any>{

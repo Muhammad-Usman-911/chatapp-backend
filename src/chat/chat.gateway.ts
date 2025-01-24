@@ -184,4 +184,40 @@ export class ChatGateway {
     }
   }
 
+  // Call
+
+  @SubscribeMessage('webrtc-offer')
+  handleOffer(
+    @MessageBody() data: { targetUserId: string; offer: RTCSessionDescriptionInit },
+    @ConnectedSocket() client: Socket
+  ) {
+    this.server.to(`user_${data.targetUserId}`).emit('webrtc-offer', {
+      senderId: client.id, // The caller's socket ID
+      offer: data.offer,
+    });
+  }
+
+  @SubscribeMessage('webrtc-answer')
+  handleAnswer(
+    @MessageBody() data: { targetUserId: string; answer: RTCSessionDescriptionInit },
+    @ConnectedSocket() client: Socket
+  ) {
+    this.server.to(`user_${data.targetUserId}`).emit('webrtc-answer', {
+      senderId: client.id,
+      answer: data.answer,
+    });
+  }
+
+  @SubscribeMessage('webrtc-ice-candidate')
+  handleIceCandidate(
+    @MessageBody() data: { targetUserId: string; candidate: RTCIceCandidateInit },
+    @ConnectedSocket() client: Socket
+  ) {
+    this.server.to(`user_${data.targetUserId}`).emit('webrtc-ice-candidate', {
+      senderId: client.id,
+      candidate: data.candidate,
+    });
+  }
+
+
 }
